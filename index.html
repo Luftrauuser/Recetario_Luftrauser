@@ -1,0 +1,276 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Recetario Luftrauser</title>
+    <script src="https://cdn.jsdelivr.net/npm/@tailwindcss/browser@4"></script>
+    <style>
+        .line-clamp-2 {
+            display: -webkit-box;
+            -webkit-line-clamp: 2;
+            line-clamp: 2; /* <-- Añadimos la propiedad estándar para compatibilidad */
+            -webkit-box-orient: vertical;  
+            overflow: hidden;
+        }
+    </style>
+</head>
+<body class="bg-slate-50 text-slate-800 font-sans antialiased">
+
+    <header class="bg-white border-b border-slate-200 sticky top-0 z-40 shadow-xs">
+        <div class="max-w-7xl mx-auto px-4 py-4 sm:px-6 lg:px-8">
+            <div class="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
+                <div>
+                    <h1 class="text-2xl font-bold text-slate-900 flex items-center gap-2">
+                        🍳 Recetario Luftrauser <span id="total-badge" class="text-xs bg-emerald-100 text-emerald-800 font-semibold px-2.5 py-0.5 rounded-full">0 recetas</span>
+                    </h1>
+                    <p class="text-sm text-slate-500">Buscador local de alta velocidad sin servidores</p>
+                </div>
+                
+                <div class="relative flex-1 max-w-md">
+                    <input type="text" id="search-input" placeholder="Buscar por título o ingrediente..." 
+                        class="w-full pl-4 pr-4 py-2 bg-slate-100 border border-slate-300 rounded-xl focus:outline-hidden focus:ring-2 focus:ring-emerald-500 focus:bg-white transition-all text-sm">
+                </div>
+            </div>
+
+            <div class="flex flex-wrap gap-2 mt-4" id="category-filters">
+                <button onclick="filtrarCategoria('TODAS')" class="cat-btn bg-emerald-600 text-white px-3 py-1.5 rounded-lg text-xs font-medium cursor-pointer shadow-xs transition-all">Todas</button>
+                <button onclick="filtrarCategoria('Desayuno')" class="cat-btn bg-white text-slate-600 border border-slate-200 px-3 py-1.5 rounded-lg text-xs font-medium cursor-pointer hover:bg-slate-50 transition-all">Desayunos</button>
+                <button onclick="filtrarCategoria('Almuerzo')" class="cat-btn bg-white text-slate-600 border border-slate-200 px-3 py-1.5 rounded-lg text-xs font-medium cursor-pointer hover:bg-slate-50 transition-all">Almuerzos</button>
+                <button onclick="filtrarCategoria('Cena')" class="cat-btn bg-white text-slate-600 border border-slate-200 px-3 py-1.5 rounded-lg text-xs font-medium cursor-pointer hover:bg-slate-50 transition-all">Cenas</button>
+                <button onclick="filtrarCategoria('Snack')" class="cat-btn bg-white text-slate-600 border border-slate-200 px-3 py-1.5 rounded-lg text-xs font-medium cursor-pointer hover:bg-slate-50 transition-all">Snacks</button>
+                <button onclick="filtrarCategoria('Keto')" class="cat-btn bg-white text-slate-600 border border-slate-200 px-3 py-1.5 rounded-lg text-xs font-medium cursor-pointer hover:bg-slate-50 transition-all">Keto</button>
+            </div>
+        </div>
+    </header>
+
+    <main class="max-w-7xl mx-auto px-4 py-8 sm:px-6 lg:px-8">
+        <div id="recipes-grid" class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
+            <div class="col-span-full text-center py-12 text-slate-400">Cargando base de datos de recetas...</div>
+        </div>
+    </main>
+
+    <div id="recipe-modal" class="fixed inset-0 bg-slate-900/60 backdrop-blur-xs z-50 hidden flex items-center justify-center p-4">
+        <div class="bg-white rounded-2xl max-w-3xl w-full max-h-[90vh] overflow-y-auto shadow-2xl flex flex-col scale-95 transition-all duration-300" id="modal-content">
+            <div class="p-6 border-b border-slate-100 flex justify-between items-start sticky top-0 bg-white z-10">
+                <div>
+                    <span id="modal-type" class="text-xs font-bold uppercase tracking-wider text-emerald-600">ALMUERZO</span>
+                    <h2 id="modal-title" class="text-xl font-bold text-slate-900 mt-1">Título de la receta</h2>
+                </div>
+                <button onclick="cerrarModal()" class="text-slate-400 hover:text-slate-600 bg-slate-100 p-1.5 rounded-full cursor-pointer text-sm">✕</button>
+            </div>
+            
+            <div class="p-6 space-y-6">
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <img id="modal-img" src="" alt="" class="w-full h-48 object-cover rounded-xl bg-slate-100">
+                    <div class="bg-slate-50 p-4 rounded-xl border border-slate-200/60 flex flex-col justify-center">
+                        <h3 class="text-xs font-bold uppercase text-slate-400 tracking-wider mb-3">Información Nutricional</h3>
+                        <div class="grid grid-cols-2 gap-4 text-center" id="modal-macros">
+                            </div>
+                    </div>
+                </div>
+
+                <div class="grid grid-cols-1 md:grid-cols-5 gap-6">
+                    <div class="md:col-span-2 bg-emerald-50/50 p-4 rounded-xl border border-emerald-100">
+                        <h4 class="font-bold text-slate-900 text-sm mb-3 flex items-center gap-1.5">📋 Ingredientes</h4>
+                        <ul id="modal-ingredients" class="space-y-2 text-xs text-slate-700"></ul>
+                    </div>
+                    <div class="md:col-span-3">
+                        <h4 class="font-bold text-slate-900 text-sm mb-3 flex items-center gap-1.5">🛠️ Preparación</h4>
+                        <ol id="modal-instructions" class="space-y-3 text-xs text-slate-600 list-decimal pl-4"></ol>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        let TODAS_LAS_RECETAS = [];
+        let recetasFiltradas = [];
+        let categoriaActual = 'TODAS';
+
+        // Al iniciar la página, leemos el JSON
+        document.addEventListener("DOMContentLoaded", async () => {
+            try {
+                const response = await fetch('recetario_completo.json');
+                if (!response.ok) throw new Error("No se pudo cargar el archivo JSON");
+                
+                const datosRaw = await response.json();
+                
+                // Procesamos y limpiamos los textos de cada receta al vuelo
+                TODAS_LAS_RECETAS = datosRaw.map(r => parsearYLimpiarReceta(r));
+                recetasFiltradas = [...TODAS_LAS_RECETAS];
+                
+                document.getElementById('total-badge').innerText = `${TODAS_LAS_RECETAS.length} recetas`;
+                renderizarTarjetas(recetasFiltradas);
+                
+                // Escuchar el buscador en tiempo real
+                document.getElementById('search-input').addEventListener('input', filtrarRecetas);
+            } catch (error) {
+                console.error(error);
+                document.getElementById('recipes-grid').innerHTML = `
+                    <div class="col-span-full text-center py-12 text-red-500 font-medium">
+                        ⚠️ Error al cargar 'recetario_completo.json'. Asegúrate de que el archivo JSON está en la misma carpeta y estás usando un servidor local (Live Server).
+                    </div>`;
+            }
+        });
+
+        // Función mágica para limpiar la basura de Avilfit
+        // Función corregida para mapear los macros saltando la "g" del texto plano
+        function parsearYLimpiarReceta(receta) {
+            const lineas = receta.contenido.split('\n').map(l => l.trim()).filter(l => l.length > 0);
+            
+            let macros = { proteinas: '0g', grasas: '0g', carbs: '0g', calorias: '0 kcal' };
+            let ingredientes = [];
+            let instrucciones = [];
+            
+            // Buscar los macros saltando 2 posiciones hacia atrás para pillar el número
+            for (let i = 0; i < lineas.length; i++) {
+                if (lineas[i] === 'Proteínas' && i > 1) macros.proteinas = lineas[i-2] + 'g';
+                if (lineas[i] === 'Grasas' && i > 1) macros.grasas = lineas[i-2] + 'g';
+                if (lineas[i] === 'Carbs' && i > 1) macros.carbs = lineas[i-2] + 'g';
+                if (lineas[i] === 'Calorías' && i > 1) {
+                    // Las calorías a veces tienen el número justo arriba o dos posiciones atrás
+                    macros.calorias = (isNaN(lineas[i-1]) ? lineas[i-2] : lineas[i-1]) + ' kcal';
+                }
+            }
+
+            // Detectar secciones de Ingredientes e Instrucciones
+            let sector = '';
+            lineas.forEach(linea => {
+                if (linea.toLowerCase() === 'ingredientes') { sector = 'ing'; return; }
+                if (linea.toLowerCase() === 'instrucciones') { sector = 'ins'; return; }
+                if (linea.toLowerCase().includes('agregar al diario')) { sector = ''; return; }
+                
+                if (sector === 'ing' && linea.length > 2) {
+                    ingredientes.push(linea.replace(/^[-•*]\s*/, ''));
+                }
+                if (sector === 'ins' && linea.length > 2) {
+                    let limpia = linea.replace(/^\d+\.\s*/, '');
+                    instrucciones.push(limpia);
+                }
+            });
+
+            return {
+                titulo: receta.titulo,
+                url: receta.url,
+                imagen_url: receta.imagen_url !== "Sin imagen" ? receta.imagen_url : "https://images.unsplash.com/photo-1498837167922-ddd27525d352?w=500&q=80",
+                macros: macros,
+                ingredientes: ingredientes,
+                instrucciones: instrucciones
+            };
+        }
+
+        // Renderiza las tarjetas en la cuadrícula
+        function renderizarTarjetas(lista) {
+            const grid = document.getElementById('recipes-grid');
+            if (lista.length === 0) {
+                grid.innerHTML = `<div class="col-span-full text-center py-12 text-slate-400">Ninguna receta coincide con tu búsqueda.</div>`;
+                return;
+            }
+
+            grid.innerHTML = lista.map((receta, index) => `
+                <div onclick="abrirModal(${index})" class="bg-white rounded-xl border border-slate-200 overflow-hidden shadow-xs hover:shadow-md hover:-translate-y-0.5 transition-all duration-200 cursor-pointer flex flex-col group">
+                    <div class="relative h-40 bg-slate-100 overflow-hidden">
+                        <img src="${receta.imagen_url}" alt="${receta.titulo}" class="w-full h-full object-cover group-hover:scale-105 transition-all duration-300" loading="lazy">
+                        <div class="absolute top-2 right-2 bg-slate-900/70 text-white font-mono text-[10px] px-2 py-0.5 rounded-md backdrop-blur-xs">
+                            ${receta.macros.calorias}
+                        </div>
+                    </div>
+                    <div class="p-4 flex-1 flex flex-col justify-between">
+                        <h3 class="font-bold text-slate-900 text-sm line-clamp-2 mb-3 group-hover:text-emerald-600 transition-colors">${receta.titulo}</h3>
+                        
+                        <div class="grid grid-cols-3 gap-1 text-center font-mono text-[10px] text-slate-500 bg-slate-50 p-1.5 rounded-lg border border-slate-100">
+                            <div><span class="block font-bold text-slate-700">${receta.macros.proteinas}</span>P</div>
+                            <div><span class="block font-bold text-slate-700">${receta.macros.carbs}</span>C</div>
+                            <div><span class="block font-bold text-slate-700">${receta.macros.grasas}</span>G</div>
+                        </div>
+                    </div>
+                </div>
+            `).join('');
+        }
+
+        // Lógica de filtrado combinado (Texto + Categoría)
+        function filtrarRecetas() {
+            const query = document.getElementById('search-input').value.toLowerCase().trim();
+            
+            recetasFiltradas = TODAS_LAS_RECETAS.filter(receta => {
+                const cumpleTexto = receta.titulo.toLowerCase().includes(query) || 
+                                    receta.ingredientes.some(i => i.toLowerCase().includes(query));
+                
+                let cumpleCat = true;
+                if (categoriaActual !== 'TODAS') {
+                    if (categoriaActual === 'Keto') {
+                        cumpleCat = receta.titulo.toLowerCase().includes('keto');
+                    } else {
+                        // Comprobamos si la URL o el título contienen la categoría (Almuerzo, Cena...)
+                        cumpleCat = receta.titulo.toLowerCase().includes(categoriaActual.toLowerCase()) || 
+                                    receta.url.toLowerCase().includes(categoriaActual.toLowerCase());
+                    }
+                }
+                
+                return cumpleTexto && cumpleCat;
+            });
+
+            renderizarTarjetas(recetasFiltradas);
+        }
+
+        function filtrarCategoria(categoria) {
+            categoriaActual = categoria;
+            
+            // Actualizar diseño de botones de filtro
+            document.querySelectorAll('.cat-btn').forEach(btn => {
+                btn.className = "cat-btn bg-white text-slate-600 border border-slate-200 px-3 py-1.5 rounded-lg text-xs font-medium cursor-pointer hover:bg-slate-50 transition-all";
+            });
+            
+            // Destacar botón activo
+            event.target.className = "cat-btn bg-emerald-600 text-white px-3 py-1.5 rounded-lg text-xs font-medium cursor-pointer shadow-xs transition-all";
+            
+            filtrarRecetas();
+        }
+
+        // Control del Modal Detallado
+        function abrirModal(indexEnFiltrados) {
+            const receta = recetasFiltradas[indexEnFiltrados];
+            
+            document.getElementById('modal-title').innerText = receta.titulo;
+            document.getElementById('modal-img').src = receta.imagen_url;
+            
+            // Inyectar macros
+            document.getElementById('modal-macros').innerHTML = `
+                <div class="bg-white p-2 rounded-lg border border-slate-200"><span class="block text-base font-bold text-slate-800">${receta.macros.calorias.replace(' kcal','')}</span><span class="text-[10px] text-slate-400 font-medium">Calorías</span></div>
+                <div class="bg-white p-2 rounded-lg border border-slate-200"><span class="block text-base font-bold text-emerald-600">${receta.macros.proteinas}</span><span class="text-[10px] text-slate-400 font-medium">Proteínas</span></div>
+                <div class="bg-white p-2 rounded-lg border border-slate-200"><span class="block text-base font-bold text-amber-600">${receta.macros.carbs}</span><span class="text-[10px] text-slate-400 font-medium">Carbohidratos</span></div>
+                <div class="bg-white p-2 rounded-lg border border-slate-200"><span class="block text-base font-bold text-blue-600">${receta.macros.grasas}</span><span class="text-[10px] text-slate-400 font-medium">Grasas</span></div>
+            `;
+
+            // Inyectar Lista de Ingredientes interactivos (con checkbox)
+            document.getElementById('modal-ingredients').innerHTML = receta.ingredientes.map(ing => `
+                <li class="flex items-start gap-2 py-0.5">
+                    <input type="checkbox" class="mt-0.5 accent-emerald-600 rounded-sm">
+                    <span>${ing}</span>
+                </li>
+            `).join('');
+
+            // Inyectar Pasos de instrucciones
+            document.getElementById('modal-instructions').innerHTML = receta.instrucciones.map(paso => `
+                <li class="pl-1 leading-relaxed">${paso}</li>
+            `).join('');
+
+            // Mostrar modal con transición suave
+            const modal = document.getElementById('recipe-modal');
+            modal.classList.remove('hidden');
+        }
+
+        function cerrarModal() {
+            document.getElementById('recipe-modal').class = document.getElementById('recipe-modal').classList.add('hidden');
+        }
+
+        // Cerrar si hace clic fuera del recuadro blanco
+        window.onclick = function(event) {
+            const modal = document.getElementById('recipe-modal');
+            if (event.target == modal) cerrarModal();
+        }
+    </script>
+</body>
+</html>
