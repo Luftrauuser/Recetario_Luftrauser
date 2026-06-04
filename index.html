@@ -92,13 +92,27 @@
         // Al iniciar la página, leemos el JSON
         document.addEventListener("DOMContentLoaded", async () => {
             try {
-                const response = await fetch('recetario_completo.json');
+                // Añadimos un número aleatorio al final (?v=...) para romper la caché del navegador
+                const response = await fetch('recetario_completo.json?v=' + new Date().getTime());
                 if (!response.ok) throw new Error("No se pudo cargar el archivo JSON");
                 
                 const datosRaw = await response.json();
                 
-                // Procesamos y limpiamos los textos de cada receta al vuelo
-                TODAS_LAS_RECETAS = datosRaw.map(r => parsearYLimpiarReceta(r));
+                // FILTRO ULTRA-ESTRICTO: Cortamos de raíz cualquier página rota
+                const datosLimpios = datosRaw.filter(receta => {
+                    if (!receta.contenido) return false;
+                    
+                    // Una receta real de Avilfit siempre tiene ingredientes, calorías
+                    // y su texto es largo. Las rotas son solo menús cortos de menos de 380 letras.
+                    const texto = receta.contenido.toLowerCase();
+                    const esLarga = receta.contenido.length > 450;
+                    const tieneEstructura = texto.includes('ingredientes') || texto.includes('calorías') || texto.includes('instrucciones');
+                    
+                    return esLarga && tieneEstructura;
+                });
+                
+                // Procesamos y limpiamos únicamente el oro puro
+                TODAS_LAS_RECETAS = datosLimpios.map(r => parsearYLimpiarReceta(r));
                 recetasFiltradas = [...TODAS_LAS_RECETAS];
                 
                 document.getElementById('total-badge').innerText = `${TODAS_LAS_RECETAS.length} recetas`;
